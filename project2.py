@@ -19,7 +19,7 @@ def predictor(args):
     print("passed args:", args)
     resultJson = {}
     userIngredients = nltk.flatten(args.ingredient)
-    cuisine, corpus, dataFrame = readJson(userIngredients)
+    cuisine, corpus, dataFrame = readJson()
     _sentences = lemmatization(corpus)
     tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
     X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, _sentences)
@@ -28,7 +28,7 @@ def predictor(args):
     nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, args.N, resultJson)
 
 
-def readJson(userIngredients):
+def readJson():
     dataFrame = pd.read_json('yummly.json')
     print(dataFrame)
     cuisine = []
@@ -38,6 +38,7 @@ def readJson(userIngredients):
     corpus = []
     for ingredients in dataFrame['ingredients']:
         corpus.append(" ".join(ingredients))
+    # I tried to add ingredients passed through command line to features but received errors when converting to features.
     # temp = ''
     # for values in userIngredients:
     #     temp = temp+" "+values
@@ -96,14 +97,15 @@ def predictionModel(X_train, X_test, Y_train, Y_test, userIngredients, tfidf, le
 
 def nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, N, resultJson):
     knn = KNeighborsClassifier(n_neighbors=N)
-    frequencyKnn = tfidf.fit_transform(corpus)
+    frequencyKnn = tfidf.fit_transform(lemmatization(corpus))
     knn.fit(frequencyKnn, cuisine)
     user_ingredient_transform = tfidf.transform(userIngredients)
     ids_prob, ids = knn.kneighbors(user_ingredient_transform, int(N))
+    dataFrame['ingredients'] = corpus
     for i in range(len(ids[0])):
         print("%d(%f) ," % (dataFrame.id[ids[0][i]], ids_prob[0][i]))
         print(dataFrame.cuisine[ids[0][i]])
-        print({dataFrame.ingredients[ids[0][i]]})
+        print({dataFrame['ingredients'][ids[0][i]]})
 
 
 if __name__ == '__main__':
