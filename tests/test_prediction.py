@@ -3,7 +3,8 @@ import scipy
 import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from project2 import readJson, lemmatization, feature_Extraction_Train, labelEncoding, predictionModel
+from project2 import readJson, lemmatization, feature_Extraction_Train, labelEncoding, predictionModel, \
+    nearestNeighbours
 
 corpus = [
         'plain flour sugar butter eggs fresh ginger root salt ground cinnamon milk vanilla extract ground ginger powdered sugar baking powder',
@@ -11,8 +12,10 @@ corpus = [
         'olive oil bread slices great northern beans garlic cloves pepper shrimp sage leaves salt',
         'melted butter matcha green tea powder white sugar milk all-purpose flour eggs salt baking powder chopped walnuts']
 
+
 def test_readJson():
-    cuisine, corpus, dataFrame = readJson()
+    fileName = 'yummly_test.json'
+    cuisine, corpus, dataFrame = readJson(fileName)
     assert type(cuisine) == list
     assert type(corpus) == list
     assert type(dataFrame) == pandas.core.frame.DataFrame
@@ -32,7 +35,8 @@ def test_lemmatization():
 
 
 def test_feature_Extraction_Train():
-    cuisine, ingredients, dataFrame = readJson()
+    fileName = 'yummly_test.json'
+    cuisine, ingredients, dataFrame = readJson(fileName)
     lemmaSentences = lemmatization(ingredients)
     tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
     X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, lemmaSentences)
@@ -47,7 +51,8 @@ def test_feature_Extraction_Train():
 
 
 def test_labelEncoding():
-    cuisine, ingredients, dataFrame = readJson()
+    fileName = 'yummly_test.json'
+    cuisine, ingredients, dataFrame = readJson(fileName)
     lemmaSentences = lemmatization(ingredients)
     tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
     X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, lemmaSentences)
@@ -69,7 +74,8 @@ def test_Prediction_Model():
       "fresh lime juice"
     ]
     resultJson = {}
-    cuisine, ingredients, dataFrame = readJson()
+    fileName = 'yummly_test.json'
+    cuisine, ingredients, dataFrame = readJson(fileName)
     lemmaSentences = lemmatization(ingredients)
     tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
     X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, lemmaSentences)
@@ -77,6 +83,25 @@ def test_Prediction_Model():
     resultJson = predictionModel(X_train, X_test, Y_train, Y_test, userIngredients, tfidf, le, resultJson)
     assert type(resultJson) == dict
     assert resultJson is not None
-    assert resultJson["cuisine"] == 'southern_us'
     assert resultJson["cuisine"] is not None
     assert resultJson["score"] is not None
+
+
+def test_nearestNeighbours():
+    userIngredients = [
+        "brown sugar",
+        "asian fish sauce",
+        "thai chile",
+        "green papaya",
+        "fresh lime juice"
+    ]
+    resultJson = {}
+    N = 5
+    fileName = 'yummly_test.json'
+    cuisine, ingredients, dataFrame = readJson(fileName)
+    tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
+    resultJson = nearestNeighbours(dataFrame, ingredients, cuisine, tfidf, userIngredients, N, resultJson)
+    assert type(resultJson) == dict
+    assert resultJson is not None
+    assert resultJson["closest"] is not None
+    assert type(resultJson["closest"]) == list

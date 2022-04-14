@@ -13,24 +13,29 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.neighbors import KNeighborsClassifier
+import sys
+import json
 
 
 def predictor(args):
-    print("passed args:", args)
     resultJson = {}
+    fileName = 'yummly.json'
     userIngredients = nltk.flatten(args.ingredient)
-    cuisine, corpus, dataFrame = readJson()
+    cuisine, corpus, dataFrame = readJson(fileName)
     _sentences = lemmatization(corpus)
     tfidf = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
     X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, _sentences)
     le, Y_train, Y_test = labelEncoding(cuisine, y_train, y_test)
     resultJson = predictionModel(X_train, X_test, Y_train, Y_test, userIngredients, tfidf, le, resultJson)
-    nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, args.N, resultJson)
+    resultJson = nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, args.N, resultJson)
+    exportResultJson(resultJson)
 
 
-def readJson():
-    dataFrame = pd.read_json('yummly.json')
-    print(dataFrame)
+def readJson(fileName):
+    try:
+        dataFrame = pd.read_json(fileName)
+    except Exception as ex:
+        sys.stderr(f"Error whilst reading the yummly.json file. Error:{ex}")
     cuisine = []
     for values in dataFrame['cuisine']:
         cuisine.append(values)
@@ -79,16 +84,14 @@ def predictionModel(X_train, X_test, Y_train, Y_test, userIngredients, tfidf, le
     svc = LinearSVC(penalty='l2', multi_class='ovr')
     clf_model = CalibratedClassifierCV(svc)
     clf_model.fit(X_train, Y_train)
-    y_prob = clf_model.predict(X_test)
-    print("score:", clf_model.score(X_test, Y_test), "test values:", y_prob)
+    clf_model.predict(X_test)
     userPref = np.asarray(lemmatization(userIngredients), dtype=object)
     userInput = tfidf.transform(userPref)
     y_prediction = clf_model.predict(userInput)
-    y_proba = clf_model.predict_proba(userInput)[0]
+    y_probability = clf_model.predict_proba(userInput)[0]
     cuisine_prediction = le.inverse_transform(y_prediction)[0]
     resultJson["cuisine"] = cuisine_prediction
-    print("prediction:", cuisine_prediction)
-    result = [i for i in zip(le.classes_, y_proba)]
+    result = [i for i in zip(le.classes_, y_probability)]
     for index in range(0, len(result), 1):
         if result[index][0] == cuisine_prediction:
             resultJson["score"] = result[index][1]
@@ -96,16 +99,24 @@ def predictionModel(X_train, X_test, Y_train, Y_test, userIngredients, tfidf, le
 
 
 def nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, N, resultJson):
-    knn = KNeighborsClassifier(n_neighbors=N)
-    frequencyKnn = tfidf.fit_transform(lemmatization(corpus))
-    knn.fit(frequencyKnn, cuisine)
+    knn = KNeighborsClassifier(n_neighbors=int(N))
+    X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, lemmatization(corpus))
+    knn.fit(X_train, y_train)
     user_ingredient_transform = tfidf.transform(userIngredients)
-    ids_prob, ids = knn.kneighbors(user_ingredient_transform, int(N))
-    dataFrame['ingredients'] = corpus
-    for i in range(len(ids[0])):
-        print("%d(%f) ," % (dataFrame.id[ids[0][i]], ids_prob[0][i]))
-        print(dataFrame.cuisine[ids[0][i]])
-        print({dataFrame['ingredients'][ids[0][i]]})
+    dish_id_probability, dish_ids = knn.kneighbors(user_ingredient_transform, int(N))
+    closest = []
+    for i in range(len(dish_ids[0])):
+        tempDict = {}
+        tempDict["id"] = str(dataFrame.id[dish_ids[0][i]])
+        tempDict["score"] = dish_id_probability[0][i]
+        closest.append(tempDict)
+    resultJson["closest"] = closest
+    return resultJson
+
+
+def exportResultJson(resultJson):
+    sys.stdout.write(json.dumps(resultJson, indent=4))
+
 
 
 if __name__ == '__main__':
