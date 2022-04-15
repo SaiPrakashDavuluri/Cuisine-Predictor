@@ -9,6 +9,7 @@ numpy = "*"
 sklearn = "*"
 joblib = "*"
 nltk = "*"
+pytest = "*"
 
 [dev-packages]
 
