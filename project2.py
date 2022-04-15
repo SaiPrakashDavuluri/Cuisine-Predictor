@@ -15,6 +15,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.neighbors import KNeighborsClassifier
 import sys
 import json
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def predictor(args):
@@ -100,23 +101,45 @@ def predictionModel(X_train, X_test, Y_train, Y_test, userIngredients, tfidf, le
 
 def nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, N, resultJson):
     knn = KNeighborsClassifier(n_neighbors=int(N))
+    dataFrame['ingredients'] = corpus
     X_train, X_test, y_train, y_test = feature_Extraction_Train(tfidf, cuisine, lemmatization(corpus))
     knn.fit(X_train, y_train)
     user_ingredient_transform = tfidf.transform(userIngredients)
     dish_id_probability, dish_ids = knn.kneighbors(user_ingredient_transform, int(N))
-    closest = []
+    closestIngredients = []
+    closestIDs = []
     for i in range(len(dish_ids[0])):
+        tempID = str(dataFrame.id[dish_ids[0][i]])
+        closestIDs.append(tempID)
+    for i in range(len(dish_ids[0])):
+        tempIng = str(dataFrame['ingredients'][dish_ids[0][i]])
+        closestIngredients.append(tempIng)
+    print("closestIngredients:", closestIngredients)
+    tempText = ''
+    for values in userIngredients:
+        tempText = tempText + ' ' + values
+    tempText = tempText.strip()
+    tempDoc = [tempText]
+    userPref = np.asarray(tempDoc, dtype=object)
+    tfidfSimilarity = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
+    smilarityScore = []
+    frequency = tfidfSimilarity.fit_transform(closestIngredients)
+    y = tfidfSimilarity.transform(userPref)
+    score = cosine_similarity(frequency, y)
+    smilarityScore.append(score.tolist())
+    smilarityScore = nltk.flatten(smilarityScore)
+    closestList = []
+    for i in range(0, len(smilarityScore), 1):
         tempDict = {}
-        tempDict["id"] = str(dataFrame.id[dish_ids[0][i]])
-        tempDict["score"] = dish_id_probability[0][i]
-        closest.append(tempDict)
-    resultJson["closest"] = closest
+        tempDict["id"] = closestIDs[i]
+        tempDict["score"] = smilarityScore[i]
+        closestList.append(tempDict)
+    resultJson["closest"] = closestList
     return resultJson
 
 
 def exportResultJson(resultJson):
     sys.stdout.write(json.dumps(resultJson, indent=4))
-
 
 
 if __name__ == '__main__':
