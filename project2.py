@@ -114,7 +114,6 @@ def nearestNeighbours(dataFrame, corpus, cuisine, tfidf, userIngredients, N, res
     for i in range(len(dish_ids[0])):
         tempIng = str(dataFrame['ingredients'][dish_ids[0][i]])
         closestIngredients.append(tempIng)
-    print("closestIngredients:", closestIngredients)
     tempText = ''
     for values in userIngredients:
         tempText = tempText + ' ' + values
