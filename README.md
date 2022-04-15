@@ -7,7 +7,7 @@ Goal: The aim of the project is to collect ingredients from user and create two 
 ### How to run the application
 
 #### steps:
-1) First clone the project using : git clone <URL>
+1) First clone the project using : git clone URL
 2) check to see if there is a directory named as 'cs5293sp22-project2' using ls
 3) open the directory using cd cs5293sp22-project2
 4) Run the below command to start the project:
