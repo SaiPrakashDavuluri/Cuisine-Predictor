@@ -1,8 +1,5 @@
-# cs5293sp22-project2
-
-Name: Sai Prakash Davuluri
-
-Goal: The aim of the project is to collect ingredients from user and create two models to predict the cuisine that can be prepared by the passed ingredients and closest cuisines.
+### Goal
+The aim of the project is to collect ingredients from user and create two models to predict the cuisine that can be prepared by the passed ingredients and closest cuisines.
 
 ### How to run the application
 
